@@ -1,0 +1,42 @@
+{
+  "draft_config": {
+    "num_drafters": 8,
+    "teams_per_drafter": 4,
+    "snake_draft": true,
+    "season": 2025
+  },
+  "strategies": {
+    "aggressive_wins": {
+      "win_weight": 1.0,
+      "loss_weight": 0.0,
+      "risk_tolerance": "high"
+    },
+    "aggressive_losses": {
+      "win_weight": 0.0,
+      "loss_weight": 1.0,
+      "risk_tolerance": "high"
+    },
+    "balanced": {
+      "win_weight": 0.5,
+      "loss_weight": 0.5,
+      "risk_tolerance": "medium"
+    },
+    "chaos_seeker": {
+      "win_weight": 0.3,
+      "loss_weight": 0.7,
+      "risk_tolerance": "very_high",
+      "prefer_high_variance": true
+    }
+  },
+  "rating_weights": {
+    "massey": 0.35,
+    "elo": 0.3,
+    "srs": 0.2,
+    "power_rank": 0.15
+  },
+  "simulation_params": {
+    "default_runs": 20000,
+    "convergence_threshold": 0.001,
+    "use_parallel": true
+  }
+}
