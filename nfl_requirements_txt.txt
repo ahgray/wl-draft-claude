@@ -1,0 +1,53 @@
+# Core Scientific Computing
+pandas>=2.0.0
+numpy>=1.24.0
+scipy>=1.10.0
+numba>=0.57.0  # JIT compilation for simulation performance
+
+# NFL Data Sources
+nfl_data_py>=0.3.0  # Primary NFL data source
+sportsipy>=0.6.0  # Backup sports data
+nfl-verse>=0.0.1  # Additional NFL analytics
+
+# Web Scraping & APIs
+beautifulsoup4>=4.12.0
+requests>=2.31.0
+requests_cache>=1.1.0
+lxml>=4.9.0
+selenium>=4.15.0  # For JavaScript-heavy sites
+
+# Database & Caching
+sqlalchemy>=2.0.0
+redis>=5.0.0  # Optional: for distributed caching
+
+# Machine Learning & Statistics
+scikit-learn>=1.3.0  # For calibration models
+statsmodels>=0.14.0  # Statistical testing
+
+# UI & Visualization
+streamlit>=1.28.0
+plotly>=5.17.0
+altair>=5.1.0
+matplotlib>=3.7.0
+seaborn>=0.12.0
+
+# Development & Testing
+pytest>=7.4.0
+pytest-cov>=4.1.0
+pytest-asyncio>=0.21.0
+black>=23.0.0
+flake8>=6.1.0
+mypy>=1.5.0
+ipykernel>=6.25.0  # For Jupyter notebooks
+jupyterlab>=4.0.0
+
+# Utilities
+python-dotenv>=1.0.0
+click>=8.1.0  # CLI interface
+tqdm>=4.66.0  # Progress bars
+loguru>=0.7.0  # Enhanced logging
+pydantic>=2.4.0  # Data validation
+
+# Performance Monitoring
+memory_profiler>=0.61.0
+line_profiler>=4.1.0
