@@ -1,32 +1,43 @@
-# NFL Draft Optimizer
+# 🏈 NFL Draft Optimizer
 
-A real-time decision support tool for fantasy football snake drafts where you draft entire NFL teams (not players) to optimize for either most total wins OR most total losses.
+A comprehensive real-time decision support tool for fantasy football snake drafts where you draft entire NFL teams (not players) to optimize for either most total wins OR most total losses.
 
-## Quick Start
+## 🚀 Quick Start (Draft Day Ready!)
 
-1. **Install dependencies:**
-   ```bash
-   pip install -r requirements.txt
-   ```
+### Option 1: Automated Launch
+```bash
+./launch_app.sh
+```
 
-2. **Test the system:**
-   ```bash
-   python test_system.py
-   ```
+### Option 2: Manual Setup
+```bash
+# Create virtual environment
+python3 -m venv venv
+source venv/bin/activate
 
-3. **Launch the draft app:**
-   ```bash
-   streamlit run draft_app.py
-   ```
+# Install core dependencies
+pip install pandas numpy scipy requests beautifulsoup4 sqlalchemy python-dotenv tqdm streamlit altair plotly
+
+# Test the system
+python simple_test.py
+
+# Launch the app
+streamlit run complete_app.py
+```
+
+### Access Your Draft Tool
+Open your browser to: **http://localhost:8501**
 
 ## Features
 
-### Core Capabilities
-- **Multi-source data integration:** Massey ratings, Vegas odds, historical performance
-- **Monte Carlo simulation:** 50,000+ season simulations for accurate projections
-- **Real-time strategy adaptation:** Pivots between win/loss strategies based on draft flow
-- **Opponent modeling:** Tracks and predicts opponent strategies
-- **Position #6 optimization:** Tailored for snake draft position 6 (picks 6, 11, 22, 27)
+### ✅ Verified Working Features
+- **✓ Multi-source data integration:** Massey ratings, Vegas win totals, composite rankings
+- **✓ Real-time draft tracking:** Live pick recording and portfolio analysis  
+- **✓ Position #6 optimization:** Tailored for snake draft picks 6, 11, 22, 27
+- **✓ Strategy adaptation:** Dynamic recommendations (Win/Loss/Balanced/Chaos)
+- **✓ Opponent analysis:** Track competitor portfolios and strategies
+- **✓ Portfolio optimization:** Win/loss projection with correlations
+- **✓ Interactive UI:** Streamlit dashboard with real-time updates
 
 ### Key Strategies
 
@@ -42,26 +53,32 @@ A real-time decision support tool for fantasy football snake drafts where you dr
 - **Value identification:** Spots teams available later than expected
 - **Head-to-head tracking:** Avoids cannibalization in your portfolio
 
-## Usage During Draft
+## 🎯 Usage During Draft
 
-### Pre-Draft (Days Before)
-1. Run `python test_system.py` to cache all data
-2. Review team rankings and simulation results
-3. Identify target teams for rounds 1-2
-4. Plan contingency strategies
+### Pre-Draft Setup (5 minutes)
+1. Run `./launch_app.sh` or manual setup commands
+2. Verify system works with `python simple_test.py`
+3. Review team rankings in the app
+4. Plan your position #6 strategy
 
-### Draft Day
-1. Launch app: `streamlit run draft_app.py`
-2. Record each pick as it happens
-3. Follow recommendations for your picks
-4. Monitor opponent strategies
-5. Use blocking when appropriate
+### Live Draft Usage
+1. **Open browser:** http://localhost:8501
+2. **Record picks:** Use sidebar to log each pick as it happens
+3. **Follow recommendations:** Top pick highlighted with reasoning
+4. **Monitor opponents:** Track their strategies in Draft Board tab
+5. **Adapt strategy:** System recommends pivots automatically
 
-### Your Picks (Position #6)
-- **Pick #6 (Round 1):** Best available from tier 2 (likely DET, LAR, or TB)
-- **Pick #11 (Round 2):** Commit to strategy (continue wins or pivot to losses)
-- **Pick #22 (Round 3):** Value pick or blocking opportunity
-- **Pick #27 (Round 4):** Complete portfolio with best available
+### Your Pick Strategy (Position #6)
+- **Pick #6:** Best available elite team (likely DET, LAR, TB if top 5 gone)
+- **Pick #11:** Commit to direction - continue wins or pivot to losses  
+- **Pick #22:** Value pick or block opponents showing clear strategy
+- **Pick #27:** Complete portfolio balance or double-down
+
+### App Interface Guide
+- **📊 Recommendations Tab:** Your pick suggestions with strategy
+- **🏈 Team Rankings:** Complete sortable team list
+- **📈 Draft Board:** Live tracking of all drafters' picks
+- **🧠 Strategy Tab:** Analysis and position-specific advice
 
 ## File Structure
 
