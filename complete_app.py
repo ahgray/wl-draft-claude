@@ -53,8 +53,11 @@ def simulate_team_season(team_rating, n_games=17, opponent_avg=8.5):
     
     return wins
 
-def get_snake_picks(position=6, n_drafters=8, n_rounds=4):
-    """Calculate snake draft pick numbers"""
+def get_snake_picks(position=None, n_drafters=8, n_rounds=4):
+    """Calculate snake draft pick numbers for any position"""
+    if position is None:
+        position = st.session_state.get('draft_position', 1)
+    
     picks = []
     for round_num in range(1, n_rounds + 1):
         if round_num % 2 == 1:  # Odd rounds
@@ -63,6 +66,34 @@ def get_snake_picks(position=6, n_drafters=8, n_rounds=4):
             pick = round_num * n_drafters - position + 1
         picks.append(pick)
     return picks
+
+def generate_pick_advice(draft_position, n_drafters=8):
+    """Generate position-specific draft advice"""
+    picks = get_snake_picks(draft_position, n_drafters, 4)
+    advice = {}
+    
+    # Position-specific strategy hints
+    if draft_position <= 2:
+        position_strategy = "elite teams available"
+    elif draft_position <= 4:
+        position_strategy = "strong tier 1 options"
+    elif draft_position <= 6:
+        position_strategy = "maximum flexibility"
+    else:
+        position_strategy = "value plays and snake advantage"
+    
+    for i, pick in enumerate(picks):
+        round_num = i + 1
+        if round_num == 1:
+            advice[pick] = f"**Pick #{pick} (R1):** Best available - {position_strategy}"
+        elif round_num == 2:
+            advice[pick] = f"**Pick #{pick} (R2):** Commit to strategy based on R1 pick"
+        elif round_num == 3:
+            advice[pick] = f"**Pick #{pick} (R3):** Value pick or block opponents"
+        else:
+            advice[pick] = f"**Pick #{pick} (R4):** Complete portfolio or double-down"
+    
+    return advice
 
 def get_current_drafter(pick_number, n_drafters=8):
     """Calculate which drafter should pick based on snake draft order"""
@@ -121,13 +152,10 @@ def get_strategy_recommendation(my_teams, team_data):
 
 def main():
     st.title("🏈 NFL Draft Optimizer - Live Draft Tool")
-    st.markdown("**Position #6 Snake Draft** | Pick Order: 6, 11, 22, 27")
-    
-    # Load data
-    with st.spinner("Loading team data and simulations..."):
-        team_data = load_team_data()
     
     # Initialize session state
+    if 'draft_position' not in st.session_state:
+        st.session_state.draft_position = None
     if 'drafted_teams' not in st.session_state:
         st.session_state.drafted_teams = []
     if 'my_teams' not in st.session_state:
@@ -137,12 +165,43 @@ def main():
     if 'drafter_teams' not in st.session_state:
         st.session_state.drafter_teams = {i: [] for i in range(1, 9)}
     
+    # Display current draft position info if set
+    if st.session_state.draft_position:
+        picks = get_snake_picks(st.session_state.draft_position)
+        st.markdown(f"**Position #{st.session_state.draft_position} Snake Draft** | Pick Order: {', '.join(map(str, picks))}")
+    else:
+        st.warning("⚠️ Please select your draft position in the sidebar to begin")
+    
+    # Load data
+    with st.spinner("Loading team data and simulations..."):
+        team_data = load_team_data()
+    
     # Sidebar - Draft Controls
     with st.sidebar:
         st.header("🎯 Draft Control Center")
         
+        # Draft position selector
+        st.subheader("📍 Your Draft Position")
+        draft_pos = st.selectbox(
+            "Select your draft position:",
+            options=[None] + list(range(1, 9)),
+            index=0 if st.session_state.draft_position is None else st.session_state.draft_position,
+            format_func=lambda x: "Select position..." if x is None else f"Position {x}",
+            help="Your draft position determines when you pick in each round"
+        )
+        
+        if draft_pos != st.session_state.draft_position:
+            st.session_state.draft_position = draft_pos
+            st.rerun()
+        
+        if st.session_state.draft_position is None:
+            st.error("Please select your draft position above")
+            st.stop()
+        
+        st.divider()
+        
         # Current state
-        our_picks = get_snake_picks()
+        our_picks = get_snake_picks(st.session_state.draft_position)
         current_round = ((st.session_state.current_pick - 1) // 8) + 1
         is_our_pick = st.session_state.current_pick in our_picks
         
@@ -182,7 +241,7 @@ def main():
                 if st.button("✅ Record Pick", type="primary"):
                     st.session_state.drafted_teams.append(selected_team)
                     st.session_state.drafter_teams[drafter_id].append(selected_team)
-                    if is_our_pick:
+                    if drafter_id == st.session_state.draft_position:
                         st.session_state.my_teams.append(selected_team)
                     st.session_state.current_pick += 1
                     st.rerun()
@@ -353,7 +412,7 @@ def main():
                 if teams:
                     portfolio = analyze_portfolio(teams, team_data)
                     drafter_analysis.append({
-                        'Drafter': f"{'YOU' if drafter_id == 6 else f'#{drafter_id}'}",
+                        'Drafter': f"{'YOU' if drafter_id == st.session_state.draft_position else f'#{drafter_id}'}",
                         'Teams': len(teams),
                         'Expected Wins': portfolio['total_expected_wins'],
                         'Expected Losses': portfolio['total_expected_losses'],
@@ -428,14 +487,9 @@ def main():
                 st.write(f"{status} {team['team_abbr']} ({team['expected_losses']:.1f}L)")
         
         # Position-specific advice
-        st.subheader("🎯 Position #6 Strategy")
+        st.subheader(f"🎯 Position #{st.session_state.draft_position} Strategy")
         
-        pick_advice = {
-            6: "**Pick #6 (R1):** Take best available elite team. Lions, Rams likely targets if top 5 gone.",
-            11: "**Pick #11 (R2):** Commit to strategy. If took elite team, continue wins. If took tank team, continue losses.",
-            22: "**Pick #22 (R3):** Value pick opportunity. Look for teams that fell or block opponents.",
-            27: "**Pick #27 (R4):** Complete your portfolio. Balance or double-down based on needs."
-        }
+        pick_advice = generate_pick_advice(st.session_state.draft_position)
         
         next_our_pick = next((p for p in our_picks if p >= st.session_state.current_pick), None)
         
