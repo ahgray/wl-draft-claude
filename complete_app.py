@@ -64,6 +64,27 @@ def get_snake_picks(position=6, n_drafters=8, n_rounds=4):
         picks.append(pick)
     return picks
 
+def get_current_drafter(pick_number, n_drafters=8):
+    """Calculate which drafter should pick based on snake draft order"""
+    if pick_number < 1:
+        return 1
+    
+    # Convert to 0-based indexing
+    pick_index = pick_number - 1
+    
+    # Calculate round (0-based) and position in round (0-based)
+    round_num = pick_index // n_drafters
+    position_in_round = pick_index % n_drafters
+    
+    # Snake draft: odd rounds (0, 2, 4...) go forward 1-8
+    # Even rounds (1, 3, 5...) go backward 8-1
+    if round_num % 2 == 0:  # Odd round in 1-based counting
+        drafter = position_in_round + 1
+    else:  # Even round in 1-based counting
+        drafter = n_drafters - position_in_round
+    
+    return drafter
+
 def analyze_portfolio(teams, team_data):
     """Analyze a portfolio of teams"""
     if not teams:
@@ -152,8 +173,8 @@ def main():
             selected_team = st.selectbox("Team", available_teams, 
                                        help="Select the team that was just drafted")
             
-            # Auto-detect drafter
-            current_drafter = ((st.session_state.current_pick - 1) % 8) + 1
+            # Auto-detect drafter using correct snake draft order
+            current_drafter = get_current_drafter(st.session_state.current_pick)
             drafter_id = st.number_input("Drafter", 1, 8, value=current_drafter)
             
             col1, col2 = st.columns(2)
