@@ -16,6 +16,7 @@ sys.path.append('src')
 
 from data.data_fetcher import NFLDataFetcher
 from simulation.win_probability import WinProbabilityModel
+from analysis.post_draft import PostDraftAnalyzer
 
 # Page config
 st.set_page_config(
@@ -281,8 +282,22 @@ def main():
         else:
             st.info("No teams drafted yet")
     
-    # Main content
-    tab1, tab2, tab3, tab4 = st.tabs(["📊 Recommendations", "🏈 Team Rankings", "📈 Draft Board", "🧠 Strategy"])
+    # Main content - Add post-draft analysis tab when draft is complete
+    draft_complete = len(st.session_state.drafted_teams) == 32
+    
+    # Show draft completion notification
+    if draft_complete:
+        st.success("🎉 **DRAFT COMPLETE!** All 32 teams have been drafted. Check out the Post-Draft Analysis tab for comprehensive insights!")
+    
+    if draft_complete:
+        tab1, tab2, tab3, tab4, tab5 = st.tabs([
+            "📊 Recommendations", "🏈 Team Rankings", "📈 Draft Board", 
+            "🧠 Strategy", "🏆 Post-Draft Analysis"
+        ])
+    else:
+        tab1, tab2, tab3, tab4 = st.tabs([
+            "📊 Recommendations", "🏈 Team Rankings", "📈 Draft Board", "🧠 Strategy"
+        ])
     
     with tab1:
         st.header("📊 Pick Recommendations")
@@ -515,6 +530,186 @@ def main():
             with col3:
                 st.metric("Chaos Potential", 
                          f"{portfolio_analysis['chaos_potential']:.2f}")
+    
+    # Post-draft analysis tab (only shown when draft is complete)
+    if draft_complete:
+        with tab5:
+            st.header("🏆 Post-Draft Analysis")
+            
+            # Initialize analyzer
+            analyzer = PostDraftAnalyzer(team_data, n_simulations=10000)
+            
+            with st.spinner("Running post-draft analysis..."):
+                # Calculate prize probabilities
+                prize_probs = analyzer.calculate_prize_probabilities(st.session_state.drafter_teams)
+                
+                # Get user's performance
+                user_teams = st.session_state.my_teams
+                our_picks = get_snake_picks(st.session_state.draft_position)
+                user_grade = analyzer.evaluate_draft_grade(user_teams, our_picks)
+                
+                # Strategy effectiveness analysis
+                strategy_analysis = analyzer.analyze_strategy_effectiveness(st.session_state.drafter_teams)
+                
+                # Create pick history for best/worst picks
+                pick_history = []
+                for i, team in enumerate(st.session_state.drafted_teams, 1):
+                    # Find which drafter picked this team
+                    drafter_id = None
+                    for did, teams in st.session_state.drafter_teams.items():
+                        if team in teams:
+                            drafter_id = did
+                            break
+                    
+                    if drafter_id:
+                        pick_history.append({
+                            'team': team,
+                            'pick_number': i,
+                            'drafter_id': drafter_id
+                        })
+                
+                best_worst_picks = analyzer.identify_best_worst_picks(pick_history)
+                predicted_standings = analyzer.predict_final_standings(prize_probs)
+            
+            # Display results
+            st.subheader("🎯 Your Draft Performance")
+            
+            col1, col2, col3, col4 = st.columns(4)
+            with col1:
+                grade_colors = {'A': '🟢', 'B': '🔵', 'C': '🟡', 'D': '🟠', 'F': '🔴'}
+                st.metric("Draft Grade", 
+                         f"{grade_colors.get(user_grade['grade'], '⚪')} {user_grade['grade']}")
+            with col2:
+                st.metric("Performance Ratio", f"{user_grade['performance_ratio']:.2f}")
+            with col3:
+                user_prob = prize_probs[prize_probs['drafter_id'] == st.session_state.draft_position]
+                if not user_prob.empty:
+                    st.metric("Win Prize Probability", f"{user_prob.iloc[0]['win_prize_prob']:.1%}")
+            with col4:
+                if not user_prob.empty:
+                    st.metric("Loss Prize Probability", f"{user_prob.iloc[0]['loss_prize_prob']:.1%}")
+            
+            st.info(f"**Analysis:** {user_grade['analysis']}")
+            
+            # Prize probabilities table
+            st.subheader("🏆 Prize Probabilities")
+            
+            display_probs = prize_probs[['drafter_id', 'expected_wins', 'expected_losses', 
+                                        'win_prize_prob', 'loss_prize_prob']].copy()
+            display_probs.columns = ['Drafter', 'Expected Wins', 'Expected Losses', 
+                                    'Win Prize %', 'Loss Prize %']
+            display_probs['Win Prize %'] = (display_probs['Win Prize %'] * 100).round(1)
+            display_probs['Loss Prize %'] = (display_probs['Loss Prize %'] * 100).round(1)
+            
+            # Highlight user's row
+            def highlight_user_row(row):
+                return ['background-color: lightgreen' if row['Drafter'] == st.session_state.draft_position else '' for _ in row]
+            
+            styled_probs = display_probs.style.apply(highlight_user_row, axis=1)
+            st.dataframe(styled_probs, use_container_width=True, hide_index=True)
+            
+            # Visualization - Prize probability scatter plot
+            fig = px.scatter(display_probs, 
+                           x='Win Prize %', 
+                           y='Loss Prize %',
+                           text='Drafter',
+                           title="Prize Probability Matrix",
+                           labels={'Win Prize %': 'Win Prize Probability (%)', 
+                                  'Loss Prize %': 'Loss Prize Probability (%)'})
+            
+            # Highlight user's position
+            fig.add_scatter(x=[display_probs[display_probs['Drafter'] == st.session_state.draft_position]['Win Prize %'].iloc[0] if not display_probs[display_probs['Drafter'] == st.session_state.draft_position].empty else 0],
+                          y=[display_probs[display_probs['Drafter'] == st.session_state.draft_position]['Loss Prize %'].iloc[0] if not display_probs[display_probs['Drafter'] == st.session_state.draft_position].empty else 0],
+                          mode='markers',
+                          marker=dict(size=15, color='red', symbol='star'),
+                          name='YOU',
+                          showlegend=True)
+            
+            fig.update_traces(textposition='top center')
+            fig.update_layout(height=500)
+            st.plotly_chart(fig, use_container_width=True)
+            
+            # Best and worst picks
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.subheader("✨ Best Value Picks")
+                if best_worst_picks['best_picks']:
+                    best_df = pd.DataFrame(best_worst_picks['best_picks'])
+                    best_df['value_captured'] = best_df['value_captured'].round(2)
+                    st.dataframe(best_df[['team', 'pick_number', 'drafter', 'value_captured']], 
+                               hide_index=True, use_container_width=True)
+                else:
+                    st.info("No picks analyzed yet")
+            
+            with col2:
+                st.subheader("❌ Biggest Reaches")
+                if best_worst_picks['worst_picks']:
+                    worst_df = pd.DataFrame(best_worst_picks['worst_picks'])
+                    worst_df['value_captured'] = worst_df['value_captured'].round(2)
+                    st.dataframe(worst_df[['team', 'pick_number', 'drafter', 'value_captured']], 
+                               hide_index=True, use_container_width=True)
+                else:
+                    st.info("No picks analyzed yet")
+            
+            # Strategy effectiveness
+            st.subheader("📊 Strategy Effectiveness")
+            
+            strategy_display = strategy_analysis[['drafter_id', 'detected_strategy', 'avg_wins', 
+                                                'strategy_consistency']].copy()
+            strategy_display.columns = ['Drafter', 'Strategy', 'Avg Wins', 'Consistency Score']
+            strategy_display['Avg Wins'] = strategy_display['Avg Wins'].round(1)
+            strategy_display['Consistency Score'] = strategy_display['Consistency Score'].round(1)
+            
+            # Highlight user's strategy
+            styled_strategy = strategy_display.style.apply(
+                lambda row: ['background-color: lightgreen' if row['Drafter'] == st.session_state.draft_position else '' for _ in row], 
+                axis=1
+            )
+            st.dataframe(styled_strategy, use_container_width=True, hide_index=True)
+            
+            # Final standings prediction
+            st.subheader("🔮 Predicted Final Standings")
+            
+            standings_display = predicted_standings[['drafter_id', 'predicted_rank', 'championship_score', 
+                                                   'confidence']].copy()
+            standings_display.columns = ['Drafter', 'Predicted Rank', 'Championship Score', 'Confidence']
+            standings_display['Championship Score'] = standings_display['Championship Score'].round(1)
+            
+            # Highlight user's predicted finish
+            styled_standings = standings_display.style.apply(
+                lambda row: ['background-color: lightgreen' if row['Drafter'] == st.session_state.draft_position else '' for _ in row], 
+                axis=1
+            )
+            st.dataframe(styled_standings, use_container_width=True, hide_index=True)
+            
+            # Summary insights
+            st.subheader("💡 Key Insights")
+            
+            user_standing = predicted_standings[predicted_standings['drafter_id'] == st.session_state.draft_position]
+            if not user_standing.empty:
+                rank = int(user_standing.iloc[0]['predicted_rank'])
+                confidence = user_standing.iloc[0]['confidence']
+                
+                insights = []
+                
+                if rank <= 2:
+                    insights.append("🏆 You're predicted to finish in the top 2! Strong draft execution.")
+                elif rank <= 4:
+                    insights.append("📈 Solid draft positioning. You're in contention for prizes.")
+                else:
+                    insights.append("🎯 Room for improvement, but anything can happen in the actual season.")
+                
+                if user_grade['grade'] in ['A', 'B']:
+                    insights.append("✅ You captured good value relative to your draft position.")
+                
+                if confidence == 'HIGH':
+                    insights.append("🔒 High confidence prediction - your strategy was clear and consistent.")
+                elif confidence == 'LOW':
+                    insights.append("🎲 Low confidence prediction - lots of variance in your portfolio.")
+                
+                for insight in insights:
+                    st.success(insight)
 
 if __name__ == "__main__":
     main()
